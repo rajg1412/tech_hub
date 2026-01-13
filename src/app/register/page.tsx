@@ -18,15 +18,18 @@ export default function RegisterPage() {
                 body: JSON.stringify(form),
                 headers: { 'Content-Type': 'application/json' },
             });
+
+            const data = await res.json().catch(() => ({ message: 'Registration failed' }));
+
             if (res.ok) {
                 router.push('/login');
             } else {
-                const data = await res.json();
-                setError(data.message);
+                setError(data.message || 'Failed to register');
                 setLoading(false);
             }
         } catch (err) {
-            setError('Something went wrong. Please try again.');
+            console.error('Register error:', err);
+            setError('Connection failed. Please check your internet.');
             setLoading(false);
         }
     };

@@ -18,18 +18,21 @@ export default function LoginPage() {
                 body: JSON.stringify(form),
                 headers: { 'Content-Type': 'application/json' },
             });
+
+            const data = await res.json().catch(() => ({ message: 'Unexpected server response' }));
+
             if (res.ok) {
-                const data = await res.json();
                 localStorage.setItem('user', JSON.stringify(data.user));
                 router.push('/profile');
                 router.refresh();
+                // We don't setLoading(false) here because we are redirecting
             } else {
-                const data = await res.json();
-                setError(data.message);
+                setError(data.message || 'Login failed');
                 setLoading(false);
             }
         } catch (err) {
-            setError('Something went wrong. Please try again.');
+            console.error('Login error:', err);
+            setError('Connection failed. Please check your network.');
             setLoading(false);
         }
     };
