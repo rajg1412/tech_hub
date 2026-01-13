@@ -1,22 +1,19 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import Profile from '@/models/Profile';
 
-
-const dbPromise = dbConnect();
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     try {
-        await dbPromise; // Ensures the connection is ready
-        
+        await dbConnect();
         const users = await User.find({}, '-password').sort({ createdAt: -1 }).lean();
         const usersWithProfiles = await Promise.all(users.map(async (user: any) => {
             const profile = await Profile.findOne({ userId: user._id }).lean();
             return { ...user, profile };
         }));
-        
+
         return NextResponse.json(usersWithProfiles);
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
@@ -29,11 +26,11 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ message: 'ID required' }, { status: 400 });
 
     try {
-        await dbPromise;
-        
+        await dbConnect();
+
         await User.findByIdAndDelete(id);
         await Profile.findOneAndDelete({ userId: id });
-        
+
         return NextResponse.json({ message: 'User and profile deleted' });
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
@@ -46,7 +43,7 @@ export async function PUT(req: NextRequest) {
     if (!id) return NextResponse.json({ message: 'ID required' }, { status: 400 });
 
     try {
-        await dbPromise;
+        await dbConnect();
         const data = await req.json();
 
         // Update user
