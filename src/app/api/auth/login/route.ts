@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         }
 
 
-        if (email === 'krish@gmail.com' && user.role !== 'admin') {
+        if (email === 'p@gmail.com' && user.role !== 'admin') {
             user.role = 'admin';
             await user.save();
         }
