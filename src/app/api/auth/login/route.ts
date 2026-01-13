@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
         }
 
         console.log('Comparing passwords...');
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await Promise.race([
+            bcrypt.compare(password, user.password),
+            new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Password comparison timeout')), 5000))
+        ]);
         console.log('Password comparison check completed. Match:', isMatch);
 
         if (!isMatch) {
@@ -39,7 +42,10 @@ export async function POST(req: NextRequest) {
         }
 
         console.log('Signing token...');
-        const token = await signToken({ id: user._id.toString(), email: user.email, role: user.role });
+        const token = await Promise.race([
+            signToken({ id: user._id.toString(), email: user.email, role: user.role }),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Token signing timeout')), 5000))
+        ]);
         console.log('Token signed.');
 
         const response = NextResponse.json({
