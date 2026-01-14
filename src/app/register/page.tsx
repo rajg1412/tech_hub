@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 export default function RegisterPage() {
     const [form, setForm] = useState({ name: '', email: '', password: '' });
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
@@ -22,7 +23,12 @@ export default function RegisterPage() {
             const data = await res.json().catch(() => ({ message: 'Registration failed' }));
 
             if (res.ok) {
-                router.push('/login');
+                if (data.requiresVerification) {
+                    setSuccess(data.message);
+                    setLoading(false);
+                } else {
+                    router.push('/login');
+                }
             } else {
                 setError(data.message || 'Failed to register');
                 setLoading(false);
@@ -39,51 +45,67 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="animate-fade" style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1rem', width: '100%', maxWidth: '400px', border: '1px solid var(--glass-border)' }}>
                 <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Create Account</h2>
                 {error && <p style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center' }}>{error}</p>}
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Name</label>
-                    <input
-                        type="text"
-                        required
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
-                    />
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Email</label>
-                    <input
-                        type="email"
-                        required
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
-                    />
-                </div>
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Password</label>
-                    <input
-                        type="password"
-                        required
-                        onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
-                    />
-                </div>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '0.5rem',
-                        background: loading ? 'var(--text-muted)' : 'var(--primary)',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        transition: '0.2s',
-                        cursor: loading ? 'not-allowed' : 'pointer'
-                    }}>
-                    {loading ? 'Creating Account...' : 'Register'}
-                </button>
-                <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                    Already have an account? <a href="/login" style={{ color: 'var(--primary)' }}>Login</a>
-                </p>
+                {success && (
+                    <div style={{ background: 'rgba(0, 255, 0, 0.1)', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{success}</p>
+                        <button
+                            onClick={() => router.push('/login')}
+                            style={{ marginTop: '1rem', background: 'var(--primary)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.3rem', cursor: 'pointer' }}
+                        >
+                            Go to Login
+                        </button>
+                    </div>
+                )}
+                {!success && (
+                    <>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Name</label>
+                            <input
+                                type="text"
+                                required
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Email</label>
+                            <input
+                                type="email"
+                                required
+                                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Password</label>
+                            <input
+                                type="password"
+                                required
+                                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                borderRadius: '0.5rem',
+                                background: loading ? 'var(--text-muted)' : 'var(--primary)',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                transition: '0.2s',
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                            }}>
+                            {loading ? 'Creating Account...' : 'Register'}
+                        </button>
+                        <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                            Already have an account? <a href="/login" style={{ color: 'var(--primary)' }}>Login</a>
+                        </p>
+                    </>
+                )}
             </form>
         </div>
     );

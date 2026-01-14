@@ -20,13 +20,24 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
+            serverSelectionTimeoutMS: 10000, // 10s timeout
         };
 
         cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+            console.log('=> New database connection established');
             return mongoose;
+        }).catch(err => {
+            console.error('=> Database connection error:', err);
+            cached.promise = null;
+            throw err;
         });
     }
-    cached.conn = await cached.promise;
+    try {
+        cached.conn = await cached.promise;
+    } catch (e) {
+        cached.promise = null;
+        throw e;
+    }
     return cached.conn;
 }
 
