@@ -31,12 +31,7 @@ export default function ProfilePage() {
 
                 if (data.user) {
                     setUser(data.user);
-                    localStorage.setItem('user', JSON.stringify({
-                        id: data.user._id,
-                        name: data.user.name,
-                        email: data.user.email,
-                        role: data.user.role
-                    }));
+                    // localStorage usage removed
                 }
             }
         } catch (err) {

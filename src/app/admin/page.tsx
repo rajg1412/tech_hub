@@ -81,7 +81,7 @@ export default function AdminPage() {
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>Name</label>
                                 <input
-                                    value={editingUser.name}
+                                    value={editingUser.name || ''}
                                     onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
                                     style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '0.4rem' }}
                                 />
@@ -90,7 +90,7 @@ export default function AdminPage() {
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>Role</label>
                                 <select
-                                    value={editingUser.role}
+                                    value={editingUser.role || 'user'}
                                     onChange={e => setEditingUser({ ...editingUser, role: e.target.value })}
                                     style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '0.4rem' }}>
                                     <option value="user">User</option>
@@ -131,7 +131,7 @@ export default function AdminPage() {
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>Skills (comma separated)</label>
                                 <input
-                                    value={Array.isArray(editingUser.profile?.skills) ? editingUser.profile.skills.join(', ') : ''}
+                                    value={Array.isArray(editingUser.profile?.skills) ? editingUser.profile.skills.join(', ') : (editingUser.profile?.skills || '')}
                                     onChange={e => setEditingUser({ ...editingUser, profile: { ...editingUser.profile, skills: e.target.value.split(',').map((s: string) => s.trim()) } })}
                                     style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '0.4rem' }}
                                 />

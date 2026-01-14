@@ -1,61 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbConnect';
-import User from '@/models/User';
-import Profile from '@/models/Profile';
-import { getAuthUser } from '@/lib/auth';
+import { createClient } from '@/utils/supabase/server';
 
-export const dynamic = 'force-dynamic';
-
-// GET profile
 export async function GET(req: NextRequest) {
-    try {
-        await dbConnect();
-        const user: any = await getAuthUser(req);
-        if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        const profile = await Profile.findOne({ userId: user.id });
+    if (authError || !user) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
 
-        // Fetch latest user data to ensure roles are sync'd
-        const latestUser = await User.findById(user.id).select('-password');
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-        return NextResponse.json({
-            profile: profile || null,
-            user: latestUser
-        });
-    } catch (error: any) {
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found"
         return NextResponse.json({ message: error.message }, { status: 500 });
     }
+
+    // Return user info along with profile
+    return NextResponse.json({
+        user: {
+            _id: user.id,
+            name: user.user_metadata?.full_name || user.email?.split('@')[0],
+            email: user.email,
+            role: profile?.role || 'user'
+        },
+        profile: profile || null
+    });
 }
 
-// POST/PUT profile (create or update)
 export async function POST(req: NextRequest) {
-    try {
-        await dbConnect();
-        const user: any = await getAuthUser(req);
-        if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        const data = await req.json();
-        const profile = await Profile.findOneAndUpdate(
-            { userId: user.id },
-            { ...data, userId: user.id },
-            { new: true, upsert: true }
-        );
+    if (authError || !user) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
 
-        return NextResponse.json(profile);
-    } catch (error: any) {
+    const body = await req.json();
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+            id: user.id,
+            ...body,
+            updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+    if (error) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }
+
+    return NextResponse.json({ message: 'Profile updated successfully', profile: data });
 }
-// DELETE profile
-export async function DELETE(req: NextRequest) {
-    try {
-        await dbConnect();
-        const user: any = await getAuthUser(req);
-        if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-        await Profile.findOneAndDelete({ userId: user.id });
-        return NextResponse.json({ message: 'Profile deleted successfully' });
-    } catch (error: any) {
+export async function DELETE(req: NextRequest) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Delete profile
+    const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+    if (error) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }
+
+    return NextResponse.json({ message: 'Profile deleted successfully' });
 }

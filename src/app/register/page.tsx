@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+// import { createClient } from '@/utils/supabase/client'; // Removed
 
 export default function RegisterPage() {
     const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -9,7 +9,7 @@ export default function RegisterPage() {
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const supabase = createClient();
+    // const supabase = createClient(); // Removed
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,22 +17,27 @@ export default function RegisterPage() {
         setError('');
         setSuccess('');
 
-        const { data, error: signUpError } = await supabase.auth.signUp({
-            email: form.email,
-            password: form.password,
-            options: {
-                data: {
-                    full_name: form.name,
-                },
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
+        try {
+            const res = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: form.email,
+                    password: form.password,
+                    full_name: form.name
+                })
+            });
 
-        if (signUpError) {
-            setError(signUpError.message);
-            setLoading(false);
-        } else {
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || 'Registration failed');
+            }
+
             setSuccess('Registration successful! Please check your email for a verification link.');
+            setLoading(false);
+        } catch (err: any) {
+            setError(err.message);
             setLoading(false);
         }
     };

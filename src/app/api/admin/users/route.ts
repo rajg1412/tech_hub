@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     // Fetch all profiles matches the old API shape expected by frontend
     // Frontend expects: { _id, name, email, role, profile: { ... } }
     // We will map Supabase profiles to this shape
+    // Fetch all profiles
     const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -32,8 +33,8 @@ export async function GET(req: NextRequest) {
 
     const users = profiles.map(p => ({
         _id: p.id,
-        name: p.full_name,
-        email: p.email,
+        name: p.full_name || 'No Name',
+        email: p.email || 'No Email',
         role: p.role,
         profile: p
     }));

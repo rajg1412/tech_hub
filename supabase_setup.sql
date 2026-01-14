@@ -1,8 +1,5 @@
--- Enable RLS
-alter table auth.users enable row level security;
-
--- Create profiles table
-create table public.profiles (
+-- Create profiles table if it doesn't exist
+create table if not exists public.profiles (
   id uuid not null references auth.users(id) on delete cascade primary key,
   email text,
   full_name text,
@@ -18,47 +15,52 @@ create table public.profiles (
 -- Enable RLS on profiles
 alter table public.profiles enable row level security;
 
--- Create a trigger to auto-create profile on signup
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, email, full_name, role)
-  values (new.id, new.email, new.raw_user_meta_data->>'full_name', 'user');
-  return new;
-end;
-$$ language plpgsql security definer;
+-- DROP ALL EXISTING POLICIES to ensure a clean slate
+drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+drop policy if exists "Users can insert own profile" on public.profiles;
+drop policy if exists "Admins can do everything" on public.profiles;
+drop policy if exists "Specific Admin Email can do everything" on public.profiles;
+drop policy if exists "Users can view own profile" on public.profiles;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- Create RLS Policies
-
--- 1. Public can view profiles (or restrict to authenticated if you prefer)
-create policy "Public profiles are viewable by everyone"
+-- 1. VIEW: Users can ONLY view their own profile. Admin can view ALL.
+create policy "View Policy"
   on public.profiles for select
-  using ( true );
-
--- 2. Users can update their own profile
-create policy "Users can update own profile"
-  on public.profiles for update
-  using ( auth.uid() = id );
-
--- 3. Users can insert their own profile (in case trigger fails or manual insert)
-create policy "Users can insert own profile"
-  on public.profiles for insert
-  with check ( auth.uid() = id );
-
--- 4. Admins can do everything
--- (We use a subquery to check if the requesting user has 'admin' role)
-create policy "Admins can do everything"
-  on public.profiles for all
-  using (
-    auth.uid() in (
-      select id from public.profiles where role = 'admin'
-    )
+  using ( 
+    auth.uid() = id 
+    OR 
+    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
   );
 
--- SET ADMIN ROLE
--- Run this AFTER the user has signed up. If the user doesn't exist yet, run it later.
--- update public.profiles set role = 'admin' where email = 'rajg50103@gmail.com';
+-- 2. UPDATE: Users can update OWN. Admin can update ALL.
+create policy "Update Policy"
+  on public.profiles for update
+  using ( 
+    auth.uid() = id 
+    OR 
+    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+  );
+
+-- 3. INSERT: Users can insert OWN. Admin can insert ALL.
+create policy "Insert Policy"
+  on public.profiles for insert
+  with check ( 
+    auth.uid() = id 
+    OR 
+    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+  );
+
+-- 4. DELETE: Users can delete OWN. Admin can delete ALL.
+create policy "Delete Policy"
+  on public.profiles for delete
+  using ( 
+    auth.uid() = id 
+    OR 
+    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+  );
+
+-- 5. SET THE ADMIN ROLE
+-- We update the role column for the specific email so the API (which checks role column) works correctly
+update public.profiles 
+set role = 'admin' 
+where email = 'rajg50103@gmail.com';
