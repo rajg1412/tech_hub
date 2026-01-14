@@ -23,10 +23,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Invalid credentials' }, { status: 400 });
         }
 
-        if (!user.isVerified) {
-            return NextResponse.json({ message: 'Please verify your email address before logging in.' }, { status: 401 });
-        }
-
 
         if (email === 'p@gmail.com' && user.role !== 'admin') {
             console.log('Promoting p@gmail.com to admin...');

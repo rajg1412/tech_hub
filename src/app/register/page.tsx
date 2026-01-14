@@ -23,12 +23,7 @@ export default function RegisterPage() {
             const data = await res.json().catch(() => ({ message: 'Registration failed' }));
 
             if (res.ok) {
-                if (data.requiresVerification) {
-                    setSuccess(data.message);
-                    setLoading(false);
-                } else {
-                    router.push('/login');
-                }
+                router.push('/login');
             } else {
                 setError(data.message || 'Failed to register');
                 setLoading(false);
