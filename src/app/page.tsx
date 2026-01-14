@@ -1,13 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function HomePage() {
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
+  const { user } = useAuth(); // Use global auth state instead of localStorage
 
   return (
     <div className="container animate-fade" style={{ textAlign: 'center', paddingTop: '10vh' }}>
@@ -16,7 +11,7 @@ export default function HomePage() {
       </h1>
       <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', maxWidth: '600px', margin: '0 auto 2rem' }}>
         A premium platform for developers to manage profiles and showcase their skills.
-        Built with Next.js, TypeScript, and MongoDB.
+        Built with Next.js, TypeScript, and Supabase.
       </p>
 
       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
