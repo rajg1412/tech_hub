@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 
 export default function RegisterPage() {
     const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -8,29 +9,30 @@ export default function RegisterPage() {
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const supabase = createClient();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
-        try {
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                body: JSON.stringify(form),
-                headers: { 'Content-Type': 'application/json' },
-            });
+        setSuccess('');
 
-            const data = await res.json().catch(() => ({ message: 'Registration failed' }));
+        const { data, error: signUpError } = await supabase.auth.signUp({
+            email: form.email,
+            password: form.password,
+            options: {
+                data: {
+                    full_name: form.name,
+                },
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
+        });
 
-            if (res.ok) {
-                router.push('/login');
-            } else {
-                setError(data.message || 'Failed to register');
-                setLoading(false);
-            }
-        } catch (err) {
-            console.error('Register error:', err);
-            setError('Connection failed. Please check your internet.');
+        if (signUpError) {
+            setError(signUpError.message);
+            setLoading(false);
+        } else {
+            setSuccess('Registration successful! Please check your email for a verification link.');
             setLoading(false);
         }
     };
@@ -43,22 +45,16 @@ export default function RegisterPage() {
                 {success && (
                     <div style={{ background: 'rgba(0, 255, 0, 0.1)', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem', textAlign: 'center' }}>
                         <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{success}</p>
-                        <button
-                            onClick={() => router.push('/login')}
-                            style={{ marginTop: '1rem', background: 'var(--primary)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.3rem', cursor: 'pointer' }}
-                        >
-                            Go to Login
-                        </button>
                     </div>
                 )}
                 {!success && (
                     <>
-
                         <div style={{ marginBottom: '1rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Name</label>
                             <input
                                 type="text"
                                 required
+                                value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                                 style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
                             />
@@ -68,6 +64,7 @@ export default function RegisterPage() {
                             <input
                                 type="email"
                                 required
+                                value={form.email}
                                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                                 style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
                             />
@@ -77,6 +74,7 @@ export default function RegisterPage() {
                             <input
                                 type="password"
                                 required
+                                value={form.password}
                                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                                 style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', color: 'white' }}
                             />
@@ -91,7 +89,6 @@ export default function RegisterPage() {
                                 background: loading ? 'var(--text-muted)' : 'var(--primary)',
                                 color: 'white',
                                 fontWeight: 'bold',
-                                transition: '0.2s',
                                 cursor: loading ? 'not-allowed' : 'pointer'
                             }}>
                             {loading ? 'Creating Account...' : 'Register'}

