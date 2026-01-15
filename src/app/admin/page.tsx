@@ -7,10 +7,34 @@ export default function AdminPage() {
     const [editingUser, setEditingUser] = useState<any>(null);
 
     const fetchUsers = async () => {
-        const res = await fetch('/api/admin/users');
-        const data = await res.json();
-        setUsers(data);
-        setLoading(false);
+        try {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (!res.ok) {
+                console.error('Failed to fetch users:', data);
+                // Optional: set an error state here to show in UI
+                setUsers([]);
+                return;
+            }
+
+            if (Array.isArray(data)) {
+                setUsers(data);
+            } else {
+                console.error('API returned non-array data:', data);
+                setUsers([]);
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            setUsers([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
