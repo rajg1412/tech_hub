@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 
 export default function AdminPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingUser, setEditingUser] = useState<any>(null);
     const router = useRouter();
+    const supabase = createClient();
 
     const fetchUsers = async () => {
         try {
@@ -50,7 +52,15 @@ export default function AdminPage() {
     };
 
     useEffect(() => {
-        fetchUsers();
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                router.push('/login');
+            } else {
+                fetchUsers();
+            }
+        };
+        checkAuth();
     }, []);
 
     const handleDelete = async (id: string) => {
