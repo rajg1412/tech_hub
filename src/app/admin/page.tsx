@@ -1,24 +1,36 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingUser, setEditingUser] = useState<any>(null);
+    const router = useRouter();
 
     const fetchUsers = async () => {
         try {
             const res = await fetch('/api/admin/users');
-            const data = await res.json();
 
-            if (res.status === 401) {
-                window.location.href = '/login';
+            // Check for redirect or unauth before parsing JSON
+            if (res.status === 401 || res.status === 403) {
+                console.warn('Unauthorized access to admin panel.');
+                router.push('/login');
                 return;
             }
 
+            // Ensure response is JSON
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                console.error('Received non-JSON response from API:', await res.text());
+                setUsers([]);
+                return;
+            }
+
+            const data = await res.json();
+
             if (!res.ok) {
                 console.error('Failed to fetch users:', data);
-                // Optional: set an error state here to show in UI
                 setUsers([]);
                 return;
             }
@@ -77,7 +89,7 @@ export default function AdminPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map(user => (
+                        {Array.isArray(users) && users.map(user => (
                             <tr key={user._id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
                                 <td style={{ padding: '1.2rem' }}>{user.name}</td>
                                 <td style={{ padding: '1.2rem' }}>{user.email}</td>
