@@ -20,9 +20,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch all profiles matches the old API shape expected by frontend
-    // Frontend expects: { _id, name, email, role, profile: { ... } }
-    // We will map Supabase profiles to this shape
     // Fetch all profiles
     const { data: profiles, error } = await supabase
         .from('profiles')
@@ -58,8 +55,15 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
 
-    // Update profile (which holds role, name, etc now)
-    const updateData: any = {
+    // Update profile
+    const updateData: {
+        role?: string;
+        full_name?: string;
+        title?: string;
+        bio?: string;
+        location?: string;
+        skills?: string[];
+    } = {
         role: body.role,
         full_name: body.name,
     };

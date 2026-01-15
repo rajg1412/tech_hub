@@ -15,48 +15,52 @@ create table if not exists public.profiles (
 -- Enable RLS on profiles
 alter table public.profiles enable row level security;
 
--- DROP ALL EXISTING POLICIES to ensure a clean slate
-drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
-drop policy if exists "Users can update own profile" on public.profiles;
-drop policy if exists "Users can insert own profile" on public.profiles;
-drop policy if exists "Admins can do everything" on public.profiles;
-drop policy if exists "Specific Admin Email can do everything" on public.profiles;
-drop policy if exists "Users can view own profile" on public.profiles;
+-- 1a. Security Definer Function to check Admin Role (Avoids Recursion)
+create or replace function public.is_admin()
+returns boolean as $$
+declare
+  current_role text;
+begin
+  select role into current_role from public.profiles
+  where id = auth.uid();
+  return current_role = 'admin';
+end;
+$$ language plpgsql security definer;
 
--- 1. VIEW: Users can ONLY view their own profile. Admin can view ALL.
+-- 2. VIEW: Users can ONLY view their own profile. Admin can view ALL.
 create policy "View Policy"
   on public.profiles for select
   using ( 
     auth.uid() = id 
     OR 
-    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+    public.is_admin()
   );
 
--- 2. UPDATE: Users can update OWN. Admin can update ALL.
+-- 3. UPDATE: Users can update OWN. Admin can update ALL.
 create policy "Update Policy"
   on public.profiles for update
   using ( 
     auth.uid() = id 
     OR 
-    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+    public.is_admin()
   );
 
--- 3. INSERT: Users can insert OWN. Admin can insert ALL.
+-- 4. INSERT: Users can insert OWN. Admin can insert ALL.
 create policy "Insert Policy"
   on public.profiles for insert
   with check ( 
     auth.uid() = id 
     OR 
-    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+    public.is_admin()
   );
 
--- 4. DELETE: Users can delete OWN. Admin can delete ALL.
+-- 5. DELETE: Users can delete OWN. Admin can delete ALL.
 create policy "Delete Policy"
   on public.profiles for delete
   using ( 
     auth.uid() = id 
     OR 
-    auth.jwt() ->> 'email' = 'rajg50103@gmail.com' 
+    public.is_admin()
   );
 
 -- 5. SET THE ADMIN ROLE

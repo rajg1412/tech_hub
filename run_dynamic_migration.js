@@ -8,25 +8,24 @@ async function runMigration() {
 
     const client = new Client({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false } // Required for Supabase/Heroku sometimes
+        ssl: { rejectUnauthorized: false }
     });
 
     try {
         await client.connect();
         console.log('Connected successfully.');
 
-        const sqlPath = path.join(__dirname, 'supabase_setup.sql');
+        // Point to the NEW dynamic policies script
+        const sqlPath = path.join(__dirname, 'update_policies_dynamic.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
 
-        console.log('Executing SQL script...');
+        console.log('Executing Dynamic Admin Policy update...');
         await client.query(sql);
 
-        // Also force a schema cache reload
         console.log('Reloading schema cache...');
         await client.query("NOTIFY pgrst, 'reload schema';");
 
-        console.log('Migration completed successfully!');
-        console.log('Tables created and Schema cache reloaded.');
+        console.log('Update completed! Admin policies are now dynamic defined by Database Role.');
 
     } catch (err) {
         console.error('Migration failed:', err);

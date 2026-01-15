@@ -42,11 +42,19 @@ export async function updateSession(request: NextRequest) {
         !request.nextUrl.pathname.startsWith('/register') &&
         !request.nextUrl.pathname.startsWith('/')
     ) {
-        // no user, potentially redirect to login if it's a protected route
-        // But for now let's just refresh session. 
-        // The previous middleware protected paths starting with /api (except auth) and /admin
-        // We should probably keep similar logic or just return response.
-        // The middleware.ts file calls this.
+        // Redirect to login if accessing protected routes without a user
+        if (request.nextUrl.pathname.startsWith('/admin') || request.nextUrl.pathname.startsWith('/account')) {
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+    }
+
+    // Role-based protection for Admin routes
+    // Note: detailed role checks (like querying the profiles table) are better handled in Server Components / API Routes
+    // to avoid complex database operations in middleware unless using Custom Claims in JWT.
+    if (user && request.nextUrl.pathname.startsWith('/admin')) {
+        // Optionally check metadata if you sync role to user_metadata
+        // const role = user.user_metadata.role;
+        // if (role !== 'admin') return NextResponse.redirect(new URL('/', request.url));
     }
 
     return supabaseResponse
