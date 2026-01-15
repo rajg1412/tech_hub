@@ -7,7 +7,7 @@ export function createClient() {
         {
             auth: {
                 persistSession: false,
-                detectSessionInUrl: false,
+                detectSessionInUrl: true,
             }
         }
     )
