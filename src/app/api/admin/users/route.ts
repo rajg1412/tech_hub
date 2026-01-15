@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+
+// Helper to get Admin Client (Bypasses RLS)
+const getAdminSupabase = () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    return createAdminClient(supabaseUrl, supabaseServiceKey);
+};
 
 export async function GET(req: NextRequest) {
     const supabase = await createClient();
 
-    // Check if requester is admin
+    // 1. Verify Requestor is Logged In
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
+    // 2. Verify Requester is Admin (Regular client works for own profile)
     const { data: requesterProfile } = await supabase
         .from('profiles')
         .select('role')
@@ -20,8 +29,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch all profiles
-    const { data: profiles, error } = await supabase
+    // 3. Use Admin Client to fetch ALL profiles (Bypassing RLS)
+    const adminSupabase = getAdminSupabase();
+    const { data: profiles, error } = await adminSupabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
@@ -42,20 +52,20 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
     const supabase = await createClient();
 
-    // Admin Check
+    // 1. Verify Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
     const { data: requesterProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
     if (requesterProfile?.role !== 'admin') return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
 
+    // 2. Parse Request
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ message: 'ID required' }, { status: 400 });
 
     const body = await req.json();
 
-    // Update profile
     const updateData: {
         role?: string;
         full_name?: string;
@@ -75,7 +85,9 @@ export async function PUT(req: NextRequest) {
         updateData.skills = body.profile.skills;
     }
 
-    const { data, error } = await supabase
+    // 3. Use Admin Client for Update
+    const adminSupabase = getAdminSupabase();
+    const { data, error } = await adminSupabase
         .from('profiles')
         .update(updateData)
         .eq('id', id)
@@ -88,23 +100,28 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    // Note: Deleting from auth.users requires Service Role Key. 
-    // For now we will just delete the profile which effectively "hides" the user from our app logic 
-    // or we can implement full delete if the user provided the secret key in env vars.
     const supabase = await createClient();
 
-    // Admin Check
+    // 1. Verify Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
     const { data: requesterProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
     if (requesterProfile?.role !== 'admin') return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
 
+    // 2. Parse Request
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ message: 'ID required' }, { status: 400 });
 
-    const { error } = await supabase.from('profiles').delete().eq('id', id);
+    // 3. Use Admin Client for Delete
+    const adminSupabase = getAdminSupabase();
+    // Optional: Delete from auth.users too if using Service Role (Requires explicit call to auth admin api)
+    // adminSupabase.auth.admin.deleteUser(id) <-- This is possible with Service Role! 
+    // Let's delete the profile first as per original logic, but we can actually delete the user now if we want.
+    // Sticking to profile delete to match original scope, but using admin client ensures it works.
+
+    const { error } = await adminSupabase.from('profiles').delete().eq('id', id);
 
     if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
