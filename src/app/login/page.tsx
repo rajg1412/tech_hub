@@ -75,6 +75,9 @@ export default function LoginPage() {
                     }}>
                     {loading ? 'Logging in...' : 'Login'}
                 </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '0.9rem' }}>
+                    <a href="/forgot-password" style={{ color: 'var(--text-muted)' }}>Forgot Password?</a>
+                </div>
                 <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
                     Don't have an account? <a href="/register" style={{ color: 'var(--primary)' }}>Register</a>
                 </p>
